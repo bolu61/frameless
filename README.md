@@ -1,2 +1,2 @@
-# stack
-A lambda calculus.
+# frameless
+A lambda calculus implementation.
