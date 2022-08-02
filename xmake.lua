@@ -1,3 +1,5 @@
-target("stack")
+set_languages("cxx20")
+target("frameless")
     set_kind("binary")
+    add_headerfiles("src/*.hxx")
     add_files("src/*.cxx")
