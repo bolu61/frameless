@@ -8,136 +8,135 @@
 #include <variant>
 #include <regex>
 #include <type_traits>
+#include <optional>
 
 #include "core.hxx"
+#include "token.hxx"
 
-namespace frameless::lexer {
+namespace frameless {
 
-  struct eof {
-    operator std::string() const;
-  };
-
-  struct ident : public std::string {
-    using std::string::string;
-    ident(const std::string & str) noexcept;
-  };
-
-  struct lparen {
-    operator std::string() const;
-  };
-
-  struct rparen {
-    operator std::string() const;
-  };
-
-  using lexemes = std::variant<lparen, rparen, ident, eof>;
-  
-  struct lexeme : public lexemes {
-    using lexemes::variant;
-    operator std::string() const;
-  };
-
+  template<typename istream>
   class lex {
+
   public:
+
     class iterator {
+
     public:
-      iterator(std::istream & input, const lexeme & lexeme) noexcept;
-      const lexeme & operator*();
+
+      explicit iterator(lex<istream> * lexer) noexcept;
+      explicit iterator() noexcept;
+
+      const token & operator*() const;
+
       iterator & operator++();
+
       iterator & operator++(int);
-      bool operator!=(const iterator & other);
+
+      bool operator!=(const iterator & other) const;
 
     private:
-      std::istream & inputs;
-      std::string buffer;
-      lexeme cur;
+      lex<istream> * lexeme;
       size_t pos;
+      token cur;
     };
 
-    explicit lex(std::istream & input);
+    explicit lex(istream && source) noexcept;
 
     iterator begin();
-    const iterator end();
+
+    iterator end();
 
   private:
-    std::istream & inputs;
+
+    istream && source;
+
+    std::string buffer;
+
+    token get();
   };
 
 
   // implementations
 
-  eof::operator std::string() const {
-    return "eof";
-  }
+  template<typename istream>
+  lex<istream>::lex(istream && source) noexcept : source(std::move(source)) {
+    // noop
+  };
 
-  ident::ident(const std::string & str) noexcept : std::string(str) {}
-  
-  lparen::operator std::string() const {
-    return "(";
-  }
-
-  rparen::operator std::string() const {
-    return ")";
-  }
-
-  lexeme::operator std::string() const {
-    return std::visit([](const auto & x) { return (std::string)x; }, (lexemes)*this);
-  }
-
-  lex::lex(std::istream & is) : inputs(is) {}
-
-  lex::iterator::iterator(std::istream & is, const lexeme & lexeme = eof()) noexcept : inputs(is), pos(0) {}
-
-  const lexeme & lex::iterator::operator*() {
-    return cur;
-  }
-
-  lex::iterator & lex::iterator::operator++() {
-    if (buffer.empty() && !(inputs >> buffer)) {
-      pos = 0;
-      cur = eof();
-      return *this;
+  template<typename istream>
+  token lex<istream>::get() {
+    if (buffer.empty() && !(source >> buffer)) {
+      return token::eof();
     }
 
-    ++pos;
-
-    std::smatch result;
-
-    if (std::regex_search(buffer, result, std::regex("^\\s*([a-zA-Z_][a-zA-Z0-9_]*)"))) {
-      cur = ident(result[1]);
+    if (std::smatch result; std::regex_search(buffer, result, std::regex("^\\s*([a-zA-Z_][a-zA-Z0-9_]*)"))) {
+      buffer = result.suffix();
+      return token::ident(result[1].str());
     }
 
     else if (std::regex_search(buffer, result, std::regex("^\\s*\\("))) {
-      cur = lparen();
+      buffer = result.suffix();
+      return token::lparen();
     }
 
     else if (std::regex_search(buffer, result, std::regex("^\\s*\\)"))) {
-      cur = rparen();
+      buffer = result.suffix();
+      return token::rparen();
     }
+  };
 
-    buffer = result.suffix();
+  template<typename istream>
+  lex<istream>::iterator::iterator(lex<istream> * lexer) noexcept
+    : lexeme(lexer), pos(0), cur(lexer->get()) {
+    // noop
+  };
+
+  template<typename istream>
+  lex<istream>::iterator::iterator() noexcept
+    : lexeme(nullptr), pos(std::numeric_limits<size_t>::max()), cur(token::eof()) {
+    // noop
+  };
+
+  template<typename istream>
+  const token & lex<istream>::iterator::operator*() const {
+    return cur;
+  }
+
+  template<typename istream>
+  typename lex<istream>::iterator & lex<istream>::iterator::operator++() {
+    if (lexeme != nullptr) {
+    cur = lexeme->get();
+      if (std::holds_alternative<token::eof>((token::variant)cur)) {
+        pos = std::numeric_limits<size_t>::max();
+      } else {
+        ++pos;
+      }
+    }
     return *this;
   }
 
-  lex::iterator & lex::iterator::operator++(int n) {
-    for (int i = 0; i < n; i++) {
-      ++ * this;
+  template<typename istream>
+  typename lex<istream>::iterator & lex<istream>::iterator::operator++(int n) {
+    while (n-- > 0) {
+      ++*this;
     }
     return *this;
   }
 
-  bool lex::iterator::operator!=(const iterator & other) {
+  template<typename istream>
+  bool lex<istream>::iterator::operator!=(const iterator & other) const {
     return pos != other.pos;
   }
 
-  lex::iterator lex::begin() {
-    auto iter = lex::iterator(inputs);
-    iter.operator++();
-    return iter;
+  template<typename istream>
+  typename lex<istream>::iterator lex<istream>::begin() {
+    return lex::iterator(this);
   }
 
-  const lex::iterator lex::end() {
-    return lex::iterator(inputs);
+  template<typename istream>
+  typename lex<istream>::iterator lex<istream>::end() {
+    return lex::iterator();
   }
 
 };
