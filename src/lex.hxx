@@ -1,7 +1,6 @@
 #pragma once
 
 #include <iterator>
-#include <sstream>
 #include <limits>
 #include <string>
 #include <memory>
@@ -49,7 +48,7 @@ namespace frameless {
 
   private:
 
-    istream && source;
+    istream source;
 
     std::string buffer;
 
@@ -71,8 +70,9 @@ namespace frameless {
     }
 
     if (std::smatch result; std::regex_search(buffer, result, std::regex("^\\s*([a-zA-Z_][a-zA-Z0-9_]*)"))) {
-      buffer = result.suffix();
-      return token::ident(result[1].str());
+      token out(token::ident(result[1].str()));
+      buffer = result.suffix().str();
+      return out;
     }
 
     else if (std::regex_search(buffer, result, std::regex("^\\s*\\("))) {

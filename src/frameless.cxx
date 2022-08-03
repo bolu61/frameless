@@ -11,10 +11,10 @@ int main(int argc, char * argv[])
 {
   for (auto && token : frameless::lex(std::istringstream("hello (world)"))) {
     std::cout << std::visit(overloaded {
-      [](frameless::token::eof) { return "eof"; },
-      [](frameless::token::ident ident) { return ident.name.data(); },
-      [](frameless::token::lparen) { return "("; },
-      [](frameless::token::rparen) { return ")"; },
+      [](frameless::token::eof) -> std::string { return "eof"; },
+      [](frameless::token::ident ident) { return std::string(ident.name); },
+      [](frameless::token::lparen) -> std::string { return "("; },
+      [](frameless::token::rparen) -> std::string { return ")"; },
     }, (frameless::token::variant)token);
 
     std::cout << " ";

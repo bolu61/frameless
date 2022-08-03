@@ -9,8 +9,8 @@ namespace frameless {
     struct eof {};
 
     struct ident {
-      std::string_view name;
-      explicit ident(const std::string_view & name) noexcept;
+      std::string name;
+      explicit ident(const std::string & name) noexcept;
     };
 
     struct lparen {};
@@ -25,7 +25,7 @@ namespace frameless {
     template<typename token_type>
     explicit(false) constexpr token(token_type && t) noexcept;
 
-    explicit(false) operator variant() const & noexcept;
+    explicit(false) operator variant() const noexcept;
 
   private:
     variant v;
@@ -34,7 +34,7 @@ namespace frameless {
 
   // implementations
 
-  token::ident::ident(const std::string_view & name) noexcept : name(name) {
+  token::ident::ident(const std::string & name) noexcept : name(name) {
     // noop
   }
 
@@ -48,7 +48,7 @@ namespace frameless {
     // noop
   }
 
-  token::operator variant() const & noexcept {
+  token::operator variant() const noexcept {
     return v;
   }
 }
