@@ -1,0 +1,4 @@
+FROM ghcr.io/bolu61/devcontainer:v0.1.2
+
+# install tools
+RUN sudo apt -y install build-essential cmake clang llvm lldb valgrind ninja-build
